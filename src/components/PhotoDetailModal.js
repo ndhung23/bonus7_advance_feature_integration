@@ -9,7 +9,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
 import { formatDate, formatCoordinates } from '../utils/formatters';
 import PhotoMapView from './PhotoMapView';
@@ -21,7 +24,13 @@ export default function PhotoDetailModal({
   onDelete,
   onGenerateDescription,
 }) {
+  const insets = useSafeAreaInsets();
   if (!photo) return null;
+
+  const safeTopPadding = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44
+  );
 
   const confirmDelete = () => {
     Alert.alert(
@@ -49,11 +58,12 @@ export default function PhotoDetailModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        <View style={styles.topBar}>
+        {/* TopBar né tai thỏ / status bar */}
+        <View style={[styles.topBar, { paddingTop: safeTopPadding + 4 }]}>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={onClose}
@@ -72,7 +82,10 @@ export default function PhotoDetailModal({
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom + 24, 40) },
+          ]}
           showsVerticalScrollIndicator={false}
         >
           <Image
@@ -175,7 +188,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingBottom: SPACING.md,
     backgroundColor: COLORS.card,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,

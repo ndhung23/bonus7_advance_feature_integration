@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
 
 export default function Header({
@@ -8,8 +9,14 @@ export default function Header({
   photoCount,
   onOpenApiKeyModal,
 }) {
+  const insets = useSafeAreaInsets();
+  const safeTopPadding = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: safeTopPadding + 8 }]}>
       <View style={styles.topRow}>
         <View style={styles.titleContainer}>
           <Text style={styles.brandTitle}>📸 SnapAI Lens</Text>
@@ -65,7 +72,6 @@ export default function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.card,
-    paddingTop: 12,
     paddingBottom: 8,
     paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
@@ -133,4 +139,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

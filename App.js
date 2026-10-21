@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   Text,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS } from './src/styles/theme';
 import Header from './src/components/Header';
 import GalleryScreen from './src/screens/GalleryScreen';
@@ -25,7 +28,8 @@ import { getCurrentLocation } from './src/services/locationService';
 import { takePhoto, pickPhoto } from './src/services/imagePickerService';
 import { generateImageDescription } from './src/services/geminiService';
 
-export default function App() {
+function MainApp() {
+  const insets = useSafeAreaInsets();
   const [photos, setPhotos] = useState([]);
   const [activeTab, setActiveTab] = useState('gallery');
   const [refreshing, setRefreshing] = useState(false);
@@ -52,16 +56,12 @@ export default function App() {
     setRefreshing(false);
   }, []);
 
-  // Chụp hoặc chọn ảnh xong: Lưu ảnh + vị trí GPS, KHÔNG tự động gen mô tả
   const handleProcessImage = async (imageResult) => {
     if (!imageResult) return;
 
     const photoId = Date.now().toString();
-
-    // Lấy toạ độ GPS
     const location = await getCurrentLocation();
 
-    // Thêm ảnh mới vào danh sách (ở trạng thái idle, chưa gọi Gemini)
     const newPhoto = {
       id: photoId,
       uri: imageResult.uri,
@@ -77,7 +77,6 @@ export default function App() {
     setPhotos(updatedList);
   };
 
-  // Chỉ khi người dùng bấm vào yêu cầu gen mô tả thì mới gọi Gemini AI
   const handleGenerateDescription = async (photoId) => {
     const photo = photos.find((p) => p.id === photoId);
     if (!photo || !photo.base64) {
@@ -85,7 +84,6 @@ export default function App() {
       return;
     }
 
-    // Đánh dấu trạng thái loading
     const loadingList = await updatePhoto(photoId, {
       status: 'loading',
       error: null,
@@ -167,9 +165,10 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.rootContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
+      {/* Header tự động né tai thỏ */}
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -197,8 +196,13 @@ export default function App() {
         )}
       </View>
 
-      {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
+      {/* Floating Action Buttons né thanh điều hướng dưới */}
+      <View
+        style={[
+          styles.fabContainer,
+          { bottom: Math.max(insets.bottom + 16, 24) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.fab, styles.fabSecondary]}
           onPress={handlePickPhoto}
@@ -236,12 +240,20 @@ export default function App() {
         visible={isApiKeyModalVisible}
         onClose={() => setIsApiKeyModalVisible(false)}
       />
-    </SafeAreaView>
+    </View>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <MainApp />
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  rootContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
@@ -251,7 +263,6 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: SPACING.lg,
     right: SPACING.md,
     flexDirection: 'row',
     gap: SPACING.sm,
