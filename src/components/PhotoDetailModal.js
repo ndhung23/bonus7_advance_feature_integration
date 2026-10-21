@@ -41,11 +41,18 @@ export default function PhotoDetailModal({
       const newDescription = await generateImageDescription(photo.base64);
       const updatedPhotos = await updatePhoto(photo.id, {
         description: newDescription,
+        status: 'done',
+        error: null,
       });
       if (onPhotoUpdated) {
-        onPhotoUpdated(updatedPhotos, { ...photo, description: newDescription });
+        onPhotoUpdated(updatedPhotos, {
+          ...photo,
+          description: newDescription,
+          status: 'done',
+          error: null,
+        });
       }
-      Alert.alert('Thành công', 'Đã cập nhật miêu tả từ Gemini AI!');
+      Alert.alert('Thành công', 'Đã tạo mô tả mới từ Gemini AI!');
     } catch (error) {
       Alert.alert('Lỗi Gemini AI', error.message || 'Không thể tạo miêu tả mới.');
     } finally {
@@ -56,7 +63,7 @@ export default function PhotoDetailModal({
   const confirmDelete = () => {
     Alert.alert(
       'Xoá ảnh',
-      'Bạn có chắc chắn muốn xoá ảnh này vĩnh viễn?',
+      'Bạn có chắc chắn muốn xoá ảnh này vĩnh viễn khỏi ứng dụng?',
       [
         { text: 'Huỷ', style: 'cancel' },
         {
@@ -70,6 +77,9 @@ export default function PhotoDetailModal({
       ]
     );
   };
+
+  const isAiLoading = isGenerating || photo.status === 'loading';
+  const isAiError = !isGenerating && photo.status === 'error';
 
   return (
     <Modal
@@ -115,10 +125,10 @@ export default function PhotoDetailModal({
               <TouchableOpacity
                 style={styles.regenerateButton}
                 onPress={handleRegenerateDescription}
-                disabled={isGenerating}
+                disabled={isAiLoading}
                 activeOpacity={0.7}
               >
-                {isGenerating ? (
+                {isAiLoading ? (
                   <ActivityIndicator size="small" color={COLORS.accent} />
                 ) : (
                   <Text style={styles.regenerateButtonText}>🔄 Tạo lại</Text>
@@ -127,9 +137,30 @@ export default function PhotoDetailModal({
             </View>
 
             <View style={styles.descriptionBox}>
-              <Text style={styles.descriptionText}>
-                {photo.description || 'Chưa có miêu tả nào từ AI.'}
-              </Text>
+              {isAiLoading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={COLORS.accent} />
+                  <Text style={styles.loadingDescriptionText}>
+                    Gemini AI đang phân tích bức ảnh...
+                  </Text>
+                </View>
+              ) : isAiError ? (
+                <View>
+                  <Text style={styles.errorText}>
+                    ⚠️ {photo.error || 'Chưa tạo được mô tả.'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={handleRegenerateDescription}
+                  >
+                    <Text style={styles.retryBtnText}>Thử lại ngay</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.descriptionText}>
+                  {photo.description || 'Chưa có miêu tả nào từ AI.'}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -247,6 +278,35 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: COLORS.accent,
   },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  loadingDescriptionText: {
+    fontSize: 14,
+    color: COLORS.accent,
+    marginLeft: 8,
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 13,
+    color: COLORS.danger,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   descriptionText: {
     fontSize: 14,
     color: COLORS.text,
@@ -265,7 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   mapContainer: {
-    height: 220,
+    height: 240,
     marginTop: SPACING.xs,
   },
 });

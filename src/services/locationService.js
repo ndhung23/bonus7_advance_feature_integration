@@ -88,3 +88,4 @@ export function openInGoogleMaps(latitude, longitude, label = '') {
       Linking.openURL(fallbackUrl);
     });
 }
+

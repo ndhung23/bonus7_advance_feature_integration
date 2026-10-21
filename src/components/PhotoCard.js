@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
 import { formatDate, formatCoordinates, truncate } from '../utils/formatters';
@@ -42,7 +43,12 @@ export default function PhotoCard({ photo, onPress, onDelete }) {
   const hasLocation =
     photo.location &&
     photo.location.latitude !== null &&
-    photo.location.longitude !== null;
+    photo.location.latitude !== undefined &&
+    photo.location.longitude !== null &&
+    photo.location.longitude !== undefined;
+
+  const isAiLoading = photo.status === 'loading';
+  const isAiError = photo.status === 'error';
 
   return (
     <TouchableOpacity
@@ -73,14 +79,27 @@ export default function PhotoCard({ photo, onPress, onDelete }) {
         </View>
 
         <View style={styles.aiBadgeContainer}>
-          <View style={styles.aiBadge}>
-            <Text style={styles.aiBadgeText}>✨ Gemini AI</Text>
+          <View style={[styles.aiBadge, isAiLoading && styles.aiBadgeLoading]}>
+            <Text style={styles.aiBadgeText}>
+              {isAiLoading ? '⏳ Gemini AI đang viết...' : '✨ Gemini AI'}
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.descriptionText} numberOfLines={2}>
-          {photo.description || 'Chưa có miêu tả từ AI.'}
-        </Text>
+        {isAiLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={COLORS.accent} />
+            <Text style={styles.loadingAiText}>Đang nhận diện nội dung bức ảnh...</Text>
+          </View>
+        ) : isAiError ? (
+          <Text style={styles.errorText} numberOfLines={2}>
+            ⚠️ {photo.error || 'Chưa tạo được mô tả. Bấm vào chi tiết để tạo lại.'}
+          </Text>
+        ) : (
+          <Text style={styles.descriptionText} numberOfLines={2}>
+            {photo.description || 'Chưa có miêu tả từ AI.'}
+          </Text>
+        )}
 
         <View style={styles.footerRow}>
           {hasLocation ? (
@@ -174,10 +193,30 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
   },
+  aiBadgeLoading: {
+    backgroundColor: '#FEF3C7',
+  },
   aiBadgeText: {
     color: COLORS.accent,
     fontSize: 11,
     fontWeight: '700',
+  },
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: SPACING.xs,
+    paddingVertical: 4,
+  },
+  loadingAiText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 12,
+    color: COLORS.danger,
+    marginVertical: SPACING.xs,
   },
   descriptionText: {
     fontSize: 13,

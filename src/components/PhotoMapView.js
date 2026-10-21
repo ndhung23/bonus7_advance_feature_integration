@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { COLORS, RADIUS, SPACING } from '../styles/theme';
 import { openInGoogleMaps } from '../services/locationService';
+
+const mapEmbedUrl = (lat, lng) =>
+  `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
 
 export default function PhotoMapView({
   latitude,
@@ -24,38 +27,30 @@ export default function PhotoMapView({
     );
   }
 
-  const initialRegion = {
-    latitude: Number(latitude),
-    longitude: Number(longitude),
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
+  const embedUrl = mapEmbedUrl(latitude, longitude);
 
   return (
     <View style={[styles.container, style]}>
-      <MapView
-        style={styles.map}
-        initialRegion={initialRegion}
-        showsUserLocation={false}
-        showsMyLocationButton={false}
-      >
-        <Marker
-          coordinate={{
-            latitude: Number(latitude),
-            longitude: Number(longitude),
-          }}
-          title={title || 'Vị trí chụp'}
-          description={description || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`}
-        />
-      </MapView>
+      <WebView
+        source={{ uri: embedUrl }}
+        nestedScrollEnabled={true}
+        style={styles.webView}
+        startInLoadingState={true}
+        renderLoading={() => (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Đang tải Google Maps...</Text>
+          </View>
+        )}
+      />
 
       {showOpenButton && (
         <TouchableOpacity
           style={styles.openMapsButton}
-          onPress={() => openInGoogleMaps(latitude, longitude, title)}
+          onPress={() => openInGoogleMaps(latitude, longitude, title || description)}
           activeOpacity={0.8}
         >
-          <Text style={styles.openMapsText}>🗺️ Mở Google Maps ứng dụng</Text>
+          <Text style={styles.openMapsText}>🗺️ Mở trong Google Maps</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -68,10 +63,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  map: {
+  webView: {
     width: '100%',
     height: '100%',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 6,
   },
   openMapsButton: {
     position: 'absolute',

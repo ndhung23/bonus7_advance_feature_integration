@@ -132,3 +132,4 @@ Sau khi quá trình build trên đám mây của Expo hoàn tất:
    git push -u origin main
    ```
 2. **Link Download file APK**: Đính kèm đường link build của Expo (EAS Build) hoặc tải file `.apk` đính kèm vào mục **Releases** của GitHub repository.
+

@@ -8,7 +8,6 @@ import {
   Text,
   ActivityIndicator,
   Alert,
-  Modal,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS } from './src/styles/theme';
 import Header from './src/components/Header';
@@ -20,6 +19,7 @@ import {
   getStoredPhotos,
   addPhoto,
   deletePhoto,
+  updatePhoto,
 } from './src/services/storageService';
 import { getCurrentLocation } from './src/services/locationService';
 import { takePhoto, pickPhoto } from './src/services/imagePickerService';
@@ -27,16 +27,12 @@ import { generateImageDescription } from './src/services/geminiService';
 
 export default function App() {
   const [photos, setPhotos] = useState([]);
-  const [activeTab, setActiveTab] = useState('gallery'); // 'gallery' | 'map'
+  const [activeTab, setActiveTab] = useState('gallery');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [isApiKeyModalVisible, setIsApiKeyModalVisible] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
-  // Processing state for taking photo + AI analysis
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState('');
-
-  // Load photos on mount
   useEffect(() => {
     loadPhotos();
   }, []);
@@ -59,60 +55,82 @@ export default function App() {
   const handleProcessImage = async (imageResult) => {
     if (!imageResult) return;
 
-    setIsProcessing(true);
+    const photoId = Date.now().toString();
+
+    // Lấy toạ độ GPS (nhanh)
+    const location = await getCurrentLocation();
+
+    // Thêm ảnh ngay lập tức vào danh sách với status loading để UX mượt mà
+    const newPhoto = {
+      id: photoId,
+      uri: imageResult.uri,
+      base64: imageResult.base64,
+      timestamp: new Date().toISOString(),
+      location,
+      description: '',
+      status: 'loading',
+      error: null,
+    };
+
+    const updatedList = await addPhoto(newPhoto);
+    setPhotos(updatedList);
+
+    // Bắt đầu gọi Gemini AI trong nền
     try {
-      // Step 1: Get GPS Location
-      setProcessingStatus('Đang lấy vị trí GPS hiện tại...');
-      const location = await getCurrentLocation();
+      const aiDescription = await generateImageDescription(imageResult.base64);
+      const finalList = await updatePhoto(photoId, {
+        description: aiDescription,
+        status: 'done',
+        error: null,
+      });
+      setPhotos(finalList);
 
-      // Step 2: Call Gemini AI for description
-      setProcessingStatus('Gemini AI đang phân tích nội dung bức ảnh...');
-      let description = '';
-      try {
-        description = await generateImageDescription(imageResult.base64);
-      } catch (aiError) {
-        console.warn('Lỗi phân tích Gemini:', aiError);
-        description = 'Chưa thể tạo mô tả AI (Kiểm tra lại Gemini API Key).';
-        Alert.alert(
-          'Gemini AI',
-          aiError.message ||
-            'Không thể tự động phân tích ảnh. Bạn có thể bấm vào ảnh để tạo lại sau khi cấu hình API Key.'
-        );
-      }
+      setSelectedPhoto((prev) =>
+        prev?.id === photoId
+          ? { ...prev, description: aiDescription, status: 'done', error: null }
+          : prev
+      );
+    } catch (aiError) {
+      console.warn('Lỗi phân tích Gemini:', aiError);
+      const finalList = await updatePhoto(photoId, {
+        status: 'error',
+        error: aiError.message || 'Không thể tạo mô tả AI.',
+      });
+      setPhotos(finalList);
 
-      // Step 3: Save to AsyncStorage
-      setProcessingStatus('Đang lưu thông tin ảnh vào bộ nhớ máy...');
-      const newPhotoItem = {
-        id: Date.now().toString(),
-        uri: imageResult.uri,
-        base64: imageResult.base64,
-        timestamp: new Date().toISOString(),
-        location,
-        description,
-      };
-
-      const updatedList = await addPhoto(newPhotoItem);
-      setPhotos(updatedList);
-    } catch (error) {
-      console.error('Lỗi khi xử lý ảnh mới:', error);
-      Alert.alert('Lỗi', 'Đã xảy ra sự cố khi lưu ảnh.');
-    } finally {
-      setIsProcessing(false);
-      setProcessingStatus('');
+      setSelectedPhoto((prev) =>
+        prev?.id === photoId
+          ? {
+              ...prev,
+              status: 'error',
+              error: aiError.message || 'Không thể tạo mô tả AI.',
+            }
+          : prev
+      );
     }
   };
 
   const handleTakePhoto = async () => {
-    const result = await takePhoto();
-    if (result) {
-      await handleProcessImage(result);
+    setIsCapturing(true);
+    try {
+      const result = await takePhoto();
+      if (result) {
+        await handleProcessImage(result);
+      }
+    } finally {
+      setIsCapturing(false);
     }
   };
 
   const handlePickPhoto = async () => {
-    const result = await pickPhoto();
-    if (result) {
-      await handleProcessImage(result);
+    setIsCapturing(true);
+    try {
+      const result = await pickPhoto();
+      if (result) {
+        await handleProcessImage(result);
+      }
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -168,6 +186,7 @@ export default function App() {
         <TouchableOpacity
           style={[styles.fab, styles.fabSecondary]}
           onPress={handlePickPhoto}
+          disabled={isCapturing}
           activeOpacity={0.8}
         >
           <Text style={styles.fabSecondaryText}>🖼️ Thư viện</Text>
@@ -176,9 +195,14 @@ export default function App() {
         <TouchableOpacity
           style={[styles.fab, styles.fabPrimary]}
           onPress={handleTakePhoto}
+          disabled={isCapturing}
           activeOpacity={0.8}
         >
-          <Text style={styles.fabPrimaryText}>📸 Chụp ảnh</Text>
+          {isCapturing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.fabPrimaryText}>📸 Chụp ảnh</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -196,17 +220,6 @@ export default function App() {
         visible={isApiKeyModalVisible}
         onClose={() => setIsApiKeyModalVisible(false)}
       />
-
-      {/* Loading Overlay when capturing + AI processing */}
-      <Modal visible={isProcessing} transparent={true} animationType="fade">
-        <View style={styles.loadingOverlay}>
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingTitle}>Đang xử lý bức ảnh</Text>
-            <Text style={styles.loadingSubtitle}>{processingStatus}</Text>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -257,38 +270,5 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
     fontSize: 13,
-  },
-  loadingOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.md,
-  },
-  loadingCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    width: '85%',
-    maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  loadingTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginTop: SPACING.md,
-  },
-  loadingSubtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    marginTop: SPACING.xs,
-    lineHeight: 18,
   },
 });
