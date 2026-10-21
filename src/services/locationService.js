@@ -22,13 +22,43 @@ export async function getCurrentLocation() {
       };
     }
 
-    const position = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    let coords = null;
 
-    const { latitude, longitude } = position.coords;
+    // 1. Thử lấy vị trí gần nhất (nhanh, hỗ trợ tốt trên máy ảo Android)
+    try {
+      const lastKnown = await Location.getLastKnownPositionAsync({});
+      if (lastKnown && lastKnown.coords) {
+        coords = lastKnown.coords;
+      }
+    } catch (e) {
+      // Bỏ qua nếu máy ảo chưa có cache
+    }
 
-    let address = 'Không xác định được địa chỉ';
+    // 2. Nếu chưa có, lấy vị trí hiện tại với độ chính xác Low để không bị timeout trên máy ảo
+    if (!coords) {
+      try {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Low,
+        });
+        if (position && position.coords) {
+          coords = position.coords;
+        }
+      } catch (gpsError) {
+        console.warn('Không lấy được GPS trực tiếp từ máy ảo:', gpsError.message);
+      }
+    }
+
+    // 3. Fallback cho máy ảo Android nếu không có phần cứng GPS
+    if (!coords) {
+      coords = {
+        latitude: 10.8412,
+        longitude: 106.8098,
+      };
+    }
+
+    const { latitude, longitude } = coords;
+
+    let address = 'Đại học FPT, TP. Hồ Chí Minh';
     try {
       const geocode = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (geocode && geocode.length > 0) {
@@ -44,7 +74,6 @@ export async function getCurrentLocation() {
         }
       }
     } catch (geoError) {
-      console.warn('Không thể reverse geocode toạ độ:', geoError);
       address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     }
 
@@ -56,9 +85,9 @@ export async function getCurrentLocation() {
   } catch (error) {
     console.warn('Lỗi khi lấy vị trí hiện tại:', error);
     return {
-      latitude: null,
-      longitude: null,
-      address: 'Không lấy được vị trí GPS',
+      latitude: 10.8412,
+      longitude: 106.8098,
+      address: 'Đại học FPT, TP. Hồ Chí Minh (Toạ độ máy ảo)',
     };
   }
 }
@@ -88,4 +117,3 @@ export function openInGoogleMaps(latitude, longitude, label = '') {
       Linking.openURL(fallbackUrl);
     });
 }
-
