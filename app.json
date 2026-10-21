@@ -1,15 +1,30 @@
 {
   "expo": {
-    "name": "bonus7_advance_feature",
-    "slug": "bonus7_advance_feature",
+    "name": "SnapAI - Photo Map & AI",
+    "slug": "bonus7-advance-feature",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bonus7.advancefeature",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ứng dụng cần quyền truy cập camera để chụp ảnh.",
+        "NSPhotoLibraryUsageDescription": "Ứng dụng cần quyền truy cập thư viện ảnh để xem và chọn ảnh.",
+        "NSPhotoLibraryAddUsageDescription": "Ứng dụng cần quyền lưu ảnh vào thư viện của bạn.",
+        "NSLocationWhenInUseUsageDescription": "Ứng dụng cần định vị để ghi lại toạ độ chụp ảnh và hiển thị trên bản đồ."
+      }
     },
     "android": {
+      "package": "com.bonus7.advancefeature",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -17,6 +32,21 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép ứng dụng truy cập thư viện ảnh.",
+          "cameraPermission": "Cho phép ứng dụng chụp ảnh bằng máy ảnh."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cho phép ứng dụng lấy toạ độ vị trí chụp ảnh."
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
