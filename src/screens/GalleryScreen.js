@@ -4,7 +4,6 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
-  Text,
 } from 'react-native';
 import { COLORS, SPACING } from '../styles/theme';
 import PhotoCard from '../components/PhotoCard';
@@ -16,6 +15,7 @@ export default function GalleryScreen({
   onRefresh,
   onPhotoPress,
   onPhotoDelete,
+  onGenerateDescription,
   onTakePhoto,
   onPickPhoto,
 }) {
@@ -37,6 +37,7 @@ export default function GalleryScreen({
             photo={item}
             onPress={onPhotoPress}
             onDelete={onPhotoDelete}
+            onGenerateDescription={onGenerateDescription}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -61,7 +62,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: SPACING.md,
-    paddingBottom: 100, // Space for floating action buttons
+    paddingBottom: 100,
   },
 });
-

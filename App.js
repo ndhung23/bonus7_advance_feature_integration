@@ -52,15 +52,16 @@ export default function App() {
     setRefreshing(false);
   }, []);
 
+  // Chụp hoặc chọn ảnh xong: Lưu ảnh + vị trí GPS, KHÔNG tự động gen mô tả
   const handleProcessImage = async (imageResult) => {
     if (!imageResult) return;
 
     const photoId = Date.now().toString();
 
-    // Lấy toạ độ GPS (nhanh)
+    // Lấy toạ độ GPS
     const location = await getCurrentLocation();
 
-    // Thêm ảnh ngay lập tức vào danh sách với status loading để UX mượt mà
+    // Thêm ảnh mới vào danh sách (ở trạng thái idle, chưa gọi Gemini)
     const newPhoto = {
       id: photoId,
       uri: imageResult.uri,
@@ -68,16 +69,34 @@ export default function App() {
       timestamp: new Date().toISOString(),
       location,
       description: '',
-      status: 'loading',
+      status: 'idle',
       error: null,
     };
 
     const updatedList = await addPhoto(newPhoto);
     setPhotos(updatedList);
+  };
 
-    // Bắt đầu gọi Gemini AI trong nền
+  // Chỉ khi người dùng bấm vào yêu cầu gen mô tả thì mới gọi Gemini AI
+  const handleGenerateDescription = async (photoId) => {
+    const photo = photos.find((p) => p.id === photoId);
+    if (!photo || !photo.base64) {
+      Alert.alert('Thông báo', 'Không tìm thấy dữ liệu ảnh để gửi tới Gemini AI.');
+      return;
+    }
+
+    // Đánh dấu trạng thái loading
+    const loadingList = await updatePhoto(photoId, {
+      status: 'loading',
+      error: null,
+    });
+    setPhotos(loadingList);
+    setSelectedPhoto((prev) =>
+      prev?.id === photoId ? { ...prev, status: 'loading', error: null } : prev
+    );
+
     try {
-      const aiDescription = await generateImageDescription(imageResult.base64);
+      const aiDescription = await generateImageDescription(photo.base64);
       const finalList = await updatePhoto(photoId, {
         description: aiDescription,
         status: 'done',
@@ -107,6 +126,7 @@ export default function App() {
             }
           : prev
       );
+      Alert.alert('Lỗi Gemini AI', aiError.message || 'Không thể tạo mô tả.');
     }
   };
 
@@ -146,11 +166,6 @@ export default function App() {
     }
   };
 
-  const handlePhotoUpdated = (updatedPhotos, updatedPhoto) => {
-    setPhotos(updatedPhotos);
-    setSelectedPhoto(updatedPhoto);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -170,6 +185,7 @@ export default function App() {
             onRefresh={handleRefresh}
             onPhotoPress={setSelectedPhoto}
             onPhotoDelete={handleDeletePhoto}
+            onGenerateDescription={handleGenerateDescription}
             onTakePhoto={handleTakePhoto}
             onPickPhoto={handlePickPhoto}
           />
@@ -212,7 +228,7 @@ export default function App() {
         photo={selectedPhoto}
         onClose={() => setSelectedPhoto(null)}
         onDelete={handleDeletePhoto}
-        onPhotoUpdated={handlePhotoUpdated}
+        onGenerateDescription={handleGenerateDescription}
       />
 
       {/* Gemini API Key Configuration Modal */}

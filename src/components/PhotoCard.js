@@ -9,10 +9,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
-import { formatDate, formatCoordinates, truncate } from '../utils/formatters';
+import { formatDate, formatCoordinates } from '../utils/formatters';
 import { openInGoogleMaps } from '../services/locationService';
 
-export default function PhotoCard({ photo, onPress, onDelete }) {
+export default function PhotoCard({
+  photo,
+  onPress,
+  onDelete,
+  onGenerateDescription,
+}) {
   const handleDelete = () => {
     Alert.alert(
       'Xoá ảnh',
@@ -49,6 +54,7 @@ export default function PhotoCard({ photo, onPress, onDelete }) {
 
   const isAiLoading = photo.status === 'loading';
   const isAiError = photo.status === 'error';
+  const hasDescription = Boolean(photo.description && photo.description.trim().length > 0);
 
   return (
     <TouchableOpacity
@@ -78,27 +84,41 @@ export default function PhotoCard({ photo, onPress, onDelete }) {
           </Text>
         </View>
 
-        <View style={styles.aiBadgeContainer}>
-          <View style={[styles.aiBadge, isAiLoading && styles.aiBadgeLoading]}>
-            <Text style={styles.aiBadgeText}>
-              {isAiLoading ? '⏳ Gemini AI đang viết...' : '✨ Gemini AI'}
-            </Text>
-          </View>
-        </View>
-
+        {/* AI Description Section */}
         {isAiLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="small" color={COLORS.accent} />
-            <Text style={styles.loadingAiText}>Đang nhận diện nội dung bức ảnh...</Text>
+            <Text style={styles.loadingAiText}>Gemini AI đang phân tích...</Text>
           </View>
         ) : isAiError ? (
-          <Text style={styles.errorText} numberOfLines={2}>
-            ⚠️ {photo.error || 'Chưa tạo được mô tả. Bấm vào chi tiết để tạo lại.'}
-          </Text>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText} numberOfLines={2}>
+              ⚠️ {photo.error || 'Chưa tạo được mô tả.'}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryBtn}
+              onPress={() => onGenerateDescription(photo.id)}
+            >
+              <Text style={styles.retryBtnText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        ) : hasDescription ? (
+          <View style={styles.descContainer}>
+            <View style={styles.aiBadge}>
+              <Text style={styles.aiBadgeText}>✨ Gemini AI</Text>
+            </View>
+            <Text style={styles.descriptionText} numberOfLines={2}>
+              {photo.description}
+            </Text>
+          </View>
         ) : (
-          <Text style={styles.descriptionText} numberOfLines={2}>
-            {photo.description || 'Chưa có miêu tả từ AI.'}
-          </Text>
+          <TouchableOpacity
+            style={styles.requestAiBtn}
+            onPress={() => onGenerateDescription(photo.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.requestAiText}>✨ Bấm để Gemini AI tạo mô tả</Text>
+          </TouchableOpacity>
         )}
 
         <View style={styles.footerRow}>
@@ -183,46 +203,80 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  aiBadgeContainer: {
-    flexDirection: 'row',
-    marginVertical: 4,
+  descContainer: {
+    marginTop: 4,
   },
   aiBadge: {
+    alignSelf: 'flex-start',
     backgroundColor: COLORS.accentLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
-  },
-  aiBadgeLoading: {
-    backgroundColor: '#FEF3C7',
+    marginBottom: 4,
   },
   aiBadgeText: {
     color: COLORS.accent,
     fontSize: 11,
     fontWeight: '700',
   },
-  loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: SPACING.xs,
-    paddingVertical: 4,
-  },
-  loadingAiText: {
-    fontSize: 12,
-    color: COLORS.accent,
-    marginLeft: 6,
-    fontWeight: '500',
-  },
-  errorText: {
-    fontSize: 12,
-    color: COLORS.danger,
-    marginVertical: SPACING.xs,
-  },
   descriptionText: {
     fontSize: 13,
     color: COLORS.text,
     lineHeight: 18,
+  },
+  requestAiBtn: {
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    borderRadius: RADIUS.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  requestAiText: {
+    color: COLORS.accent,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginVertical: SPACING.xs,
+    paddingVertical: 6,
+    backgroundColor: '#FAF5FF',
+    paddingHorizontal: 10,
+    borderRadius: RADIUS.md,
+  },
+  loadingAiText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  errorBox: {
+    marginVertical: SPACING.xs,
+    padding: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADIUS.md,
+  },
+  errorText: {
+    fontSize: 12,
+    color: COLORS.danger,
+    lineHeight: 16,
+  },
+  retryBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: COLORS.danger,
+    borderRadius: RADIUS.sm,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   footerRow: {
     flexDirection: 'row',

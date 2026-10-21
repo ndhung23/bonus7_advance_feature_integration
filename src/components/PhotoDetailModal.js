@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Modal,
   View,
@@ -13,52 +13,15 @@ import {
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
 import { formatDate, formatCoordinates } from '../utils/formatters';
 import PhotoMapView from './PhotoMapView';
-import { generateImageDescription } from '../services/geminiService';
-import { updatePhoto } from '../services/storageService';
 
 export default function PhotoDetailModal({
   visible,
   photo,
   onClose,
   onDelete,
-  onPhotoUpdated,
+  onGenerateDescription,
 }) {
-  const [isGenerating, setIsGenerating] = useState(false);
-
   if (!photo) return null;
-
-  const handleRegenerateDescription = async () => {
-    if (!photo.base64) {
-      Alert.alert(
-        'Thông báo',
-        'Ảnh này không có dữ liệu base64 để gửi tới Gemini AI.'
-      );
-      return;
-    }
-
-    try {
-      setIsGenerating(true);
-      const newDescription = await generateImageDescription(photo.base64);
-      const updatedPhotos = await updatePhoto(photo.id, {
-        description: newDescription,
-        status: 'done',
-        error: null,
-      });
-      if (onPhotoUpdated) {
-        onPhotoUpdated(updatedPhotos, {
-          ...photo,
-          description: newDescription,
-          status: 'done',
-          error: null,
-        });
-      }
-      Alert.alert('Thành công', 'Đã tạo mô tả mới từ Gemini AI!');
-    } catch (error) {
-      Alert.alert('Lỗi Gemini AI', error.message || 'Không thể tạo miêu tả mới.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const confirmDelete = () => {
     Alert.alert(
@@ -78,8 +41,9 @@ export default function PhotoDetailModal({
     );
   };
 
-  const isAiLoading = isGenerating || photo.status === 'loading';
-  const isAiError = !isGenerating && photo.status === 'error';
+  const isAiLoading = photo.status === 'loading';
+  const isAiError = photo.status === 'error';
+  const hasDescription = Boolean(photo.description && photo.description.trim().length > 0);
 
   return (
     <Modal
@@ -117,23 +81,22 @@ export default function PhotoDetailModal({
             resizeMode="cover"
           />
 
+          {/* AI Description Section */}
           <View style={styles.cardSection}>
             <Text style={styles.timestampText}>{formatDate(photo.timestamp)}</Text>
 
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>✨ Miêu tả bởi Gemini AI</Text>
-              <TouchableOpacity
-                style={styles.regenerateButton}
-                onPress={handleRegenerateDescription}
-                disabled={isAiLoading}
-                activeOpacity={0.7}
-              >
-                {isAiLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.accent} />
-                ) : (
+              {hasDescription && (
+                <TouchableOpacity
+                  style={styles.regenerateButton}
+                  onPress={() => onGenerateDescription(photo.id)}
+                  disabled={isAiLoading}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.regenerateButtonText}>🔄 Tạo lại</Text>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.descriptionBox}>
@@ -141,7 +104,7 @@ export default function PhotoDetailModal({
                 <View style={styles.loadingRow}>
                   <ActivityIndicator size="small" color={COLORS.accent} />
                   <Text style={styles.loadingDescriptionText}>
-                    Gemini AI đang phân tích bức ảnh...
+                    Gemini AI đang phân tích và tạo mô tả...
                   </Text>
                 </View>
               ) : isAiError ? (
@@ -151,19 +114,33 @@ export default function PhotoDetailModal({
                   </Text>
                   <TouchableOpacity
                     style={styles.retryBtn}
-                    onPress={handleRegenerateDescription}
+                    onPress={() => onGenerateDescription(photo.id)}
                   >
                     <Text style={styles.retryBtnText}>Thử lại ngay</Text>
                   </TouchableOpacity>
                 </View>
+              ) : hasDescription ? (
+                <Text style={styles.descriptionText}>{photo.description}</Text>
               ) : (
-                <Text style={styles.descriptionText}>
-                  {photo.description || 'Chưa có miêu tả nào từ AI.'}
-                </Text>
+                <View style={styles.noDescriptionContainer}>
+                  <Text style={styles.noDescriptionText}>
+                    Bức ảnh này chưa được tạo mô tả bằng Gemini AI.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.generateCtaBtn}
+                    onPress={() => onGenerateDescription(photo.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.generateCtaBtnText}>
+                      ✨ Phân tích & Tạo mô tả bằng Gemini AI
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
 
+          {/* Location & Google Map Section */}
           <View style={styles.cardSection}>
             <Text style={styles.sectionTitle}>📍 Vị trí trên Google Map</Text>
             <Text style={styles.addressText}>
@@ -311,6 +288,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
     lineHeight: 22,
+  },
+  noDescriptionContainer: {
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  noDescriptionText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  generateCtaBtn: {
+    backgroundColor: COLORS.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.md,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  generateCtaBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
   },
   addressText: {
     fontSize: 14,
