@@ -19,7 +19,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "emu": "powershell -Command \"& \\\"$env:LOCALAPPDATA\\Android\\Sdk\\emulator\\emulator.exe\\\" -avd Medium_Phone\""
+    "emu": "powershell -Command \"$env:ANDROID_HOME = 'D:\\UngDungDuocTai\\Sdk'; $env:ANDROID_SDK_ROOT = 'D:\\UngDungDuocTai\\Sdk'; & 'D:\\UngDungDuocTai\\Sdk\\emulator\\emulator.exe' -avd Medium_Phone\""
   },
   "private": true
 }
