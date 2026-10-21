@@ -135,5 +135,6 @@ npx eas-cli build -p android --profile preview
 ```
 
 Sau khi hoàn tất, hệ thống sẽ trả về đường link tải file `.apk` trực tiếp trên trang `expo.dev`.
-#   b o n u s 7 _ a d v a n c e _ f e a t u r e _ i n t e g r a t i o n  
+#   b o n u s 7 _ a d v a n c e _ f e a t u r e _ i n t e g r a t i o n 
+ 
  
