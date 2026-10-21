@@ -9,11 +9,11 @@
 
 | Nội dung | Đường dẫn (URL) | Ghi chú |
 | :--- | :--- | :--- |
-| 📱 **Link Tải File Cài Đặt Android (APK)** | [Tải trực tiếp file APK (Bản mới nhất)](https://expo.dev/accounts/ndhung23/projects/bonus7-advance-feature/builds) | Cài đặt và chạy native 100% trên điện thoại Android (Build qua EAS Build với `buildType: apk`) |
-| 🚀 **Link Ứng Dụng Web Chạy Trực Tiếp** | [https://bonus7-advance-feature.expo.app](https://bonus7-advance-feature.expo.app) | Bản React Native Web deploy qua EAS Hosting / Web Preview |
-| 💻 **Link Mã Nguồn (GitHub Repository)** | [https://github.com/ndhung23/bonus7-advance-feature](https://github.com/ndhung23/bonus7-advance-feature) | Source code công khai, quản lý commit và tài liệu hướng dẫn |
-| ⚙️ **Link Theo Dõi EAS Build (Expo Cloud)** | [Trang Build EAS Android](https://expo.dev/accounts/ndhung23/projects/bonus7-advance-feature/builds) | Tiến trình build tự động artifact APK bản mới nhất trên Expo Cloud |
-| 📊 **Link Expo Project Dashboard** | [Expo Project Overview](https://expo.dev/accounts/ndhung23/projects/bonus7-advance-feature) | Trang quản lý dự án trên nền tảng Expo |
+| 📱 **Link Tải File Cài Đặt Android (APK)** | [Tải trực tiếp file APK (Bản build mới nhất)](https://expo.dev/accounts/ndhung23/projects/bonus7advancefeature/builds/a7cd9a6e-3d2a-47ed-ad0e-bbaffccdcbd8) | Cài đặt và chạy native 100% trên điện thoại Android (Build qua EAS Build với `buildType: apk`) |
+| 🚀 **Link Ứng Dụng Web Chạy Trực Tiếp** | [https://bonus7advancefeature.expo.app](https://bonus7advancefeature.expo.app) | Bản React Native Web deploy qua EAS Hosting / Web Preview |
+| 💻 **Link Mã Nguồn (GitHub Repository)** | [https://github.com/ndhung23/bonus7_advance_feature_integration](https://github.com/ndhung23/bonus7_advance_feature_integration) | Source code công khai, quản lý commit và tài liệu hướng dẫn |
+| ⚙️ **Link Theo Dõi EAS Build (Expo Cloud)** | [Trang Build EAS Android APK](https://expo.dev/accounts/ndhung23/projects/bonus7advancefeature/builds/a7cd9a6e-3d2a-47ed-ad0e-bbaffccdcbd8) | Tiến trình build tự động artifact APK bản mới nhất trên Expo Cloud |
+| 📊 **Link Expo Project Dashboard** | [Expo Project Overview](https://expo.dev/accounts/ndhung23/projects/bonus7advancefeature) | Trang quản lý dự án chính thức trên nền tảng Expo |
 
 ---
 
@@ -72,7 +72,7 @@ bonus7_advance_feature/
 │   ├── services/
 │   │   ├── geminiService.js      # Logic gọi Google Gemini Multimodal Vision API
 │   │   ├── imagePickerService.js # Quản lý quyền và chụp/chọn ảnh từ thiết bị
-│   │   ├── locationService.js    # Logic lấy GPS, Reverse Geocoding & Deep Link Google Maps
+│   │   └── locationService.js    # Logic lấy GPS, Reverse Geocoding & Deep Link Google Maps
 │   │   └── storageService.js     # Quản lý đọc/ghi dữ liệu bền vững bằng AsyncStorage
 │   ├── styles/
 │   │   └── theme.js              # Bảng màu, typography và khoảng cách chuẩn
@@ -135,6 +135,3 @@ npx eas-cli build -p android --profile preview
 ```
 
 Sau khi hoàn tất, hệ thống sẽ trả về đường link tải file `.apk` trực tiếp trên trang `expo.dev`.
-#   b o n u s 7 _ a d v a n c e _ f e a t u r e _ i n t e g r a t i o n 
- 
- 
