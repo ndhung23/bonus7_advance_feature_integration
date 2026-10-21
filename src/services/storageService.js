@@ -64,13 +64,38 @@ export async function updatePhoto(photoId, updates) {
   }
 }
 
+export function hasEnvApiKey() {
+  const envKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  return Boolean(envKey && envKey.trim().length > 0);
+}
+
+export async function getCustomApiKey() {
+  try {
+    return (await AsyncStorage.getItem(STORAGE_KEYS.API_KEY)) || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+export async function clearCustomApiKey() {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.API_KEY);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 export async function getStoredApiKey() {
   try {
-    const key = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
-    return key || process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+    const customKey = await AsyncStorage.getItem(STORAGE_KEYS.API_KEY);
+    if (customKey && customKey.trim().length > 0) {
+      return customKey.trim();
+    }
+    return (process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim();
   } catch (error) {
     console.error('Lỗi khi đọc Gemini API Key:', error);
-    return process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+    return (process.env.EXPO_PUBLIC_GEMINI_API_KEY || '').trim();
   }
 }
 
@@ -83,4 +108,3 @@ export async function saveStoredApiKey(apiKey) {
     return false;
   }
 }
-

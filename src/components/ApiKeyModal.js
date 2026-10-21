@@ -10,22 +10,32 @@ import {
   Linking,
 } from 'react-native';
 import { COLORS, SPACING, RADIUS } from '../styles/theme';
-import { getStoredApiKey, saveStoredApiKey } from '../services/storageService';
+import {
+  getCustomApiKey,
+  hasEnvApiKey,
+  saveStoredApiKey,
+  clearCustomApiKey,
+} from '../services/storageService';
 
 export default function ApiKeyModal({ visible, onClose, onSaved }) {
   const [apiKey, setApiKey] = useState('');
-  const [isSaved, setIsSaved] = useState(false);
+  const [hasEnv, setHasEnv] = useState(false);
+  const [hasCustom, setHasCustom] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
     if (visible) {
-      loadKey();
+      loadKeyStatus();
     }
   }, [visible]);
 
-  const loadKey = async () => {
-    const key = await getStoredApiKey();
-    setApiKey(key || '');
-    setIsSaved(!!key);
+  const loadKeyStatus = async () => {
+    const isEnvPresent = hasEnvApiKey();
+    const customKey = await getCustomApiKey();
+    setHasEnv(isEnvPresent);
+    setHasCustom(Boolean(customKey));
+    setApiKey(customKey ? customKey : '');
+    setShowKey(false);
   };
 
   const handleSave = async () => {
@@ -37,13 +47,21 @@ export default function ApiKeyModal({ visible, onClose, onSaved }) {
 
     const success = await saveStoredApiKey(trimmed);
     if (success) {
-      Alert.alert('Thành công', 'Đã lưu Gemini API Key vào máy của bạn.');
-      setIsSaved(true);
+      Alert.alert('Thành công', 'Đã lưu Gemini API Key tuỳ chỉnh an toàn.');
+      setHasCustom(true);
       if (onSaved) onSaved(trimmed);
       onClose();
     } else {
       Alert.alert('Lỗi', 'Không thể lưu API Key vào bộ nhớ.');
     }
+  };
+
+  const handleResetToEnv = async () => {
+    await clearCustomApiKey();
+    setApiKey('');
+    setHasCustom(false);
+    Alert.alert('Thông báo', 'Đã xoá key tuỳ chỉnh, ứng dụng sẽ ưu tiên dùng key từ .env.');
+    if (onSaved) onSaved(null);
   };
 
   const openAiStudio = () => {
@@ -60,32 +78,67 @@ export default function ApiKeyModal({ visible, onClose, onSaved }) {
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
           <View style={styles.header}>
-            <Text style={styles.title}>🔑 Cấu hình Gemini AI Key</Text>
+            <Text style={styles.title}>🔒 Cấu hình Gemini AI Key</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.guideText}>
-            Gemini AI cần API Key để phân tích và tạo mô tả cho ảnh đã chụp.
-            Bạn có thể lấy key hoàn toàn miễn phí tại Google AI Studio.
-          </Text>
+          {/* Status Indicator */}
+          {hasEnv && !hasCustom && (
+            <View style={styles.statusBoxActive}>
+              <Text style={styles.statusTitle}>🟢 Đang sử dụng Key từ file .env</Text>
+              <Text style={styles.statusDesc}>
+                Key của bạn đã được bảo vệ tự động và ẩn khỏi giao diện.
+              </Text>
+            </View>
+          )}
+
+          {hasCustom && (
+            <View style={styles.statusBoxCustom}>
+              <Text style={styles.statusTitle}>🟣 Đang sử dụng Key tuỳ chỉnh (ghi đè)</Text>
+              <TouchableOpacity onPress={handleResetToEnv} style={styles.resetBtn}>
+                <Text style={styles.resetBtnText}>↩ Xoá key tuỳ chỉnh, dùng lại .env</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!hasEnv && !hasCustom && (
+            <View style={styles.statusBoxMissing}>
+              <Text style={styles.statusTitleMissing}>⚠️ Chưa có Gemini API Key</Text>
+              <Text style={styles.statusDesc}>
+                Vui lòng nhập key hoặc thêm vào file .env để Gemini AI hoạt động.
+              </Text>
+            </View>
+          )}
 
           <TouchableOpacity onPress={openAiStudio} style={styles.linkButton}>
-            <Text style={styles.linkButtonText}>🌐 Mở Google AI Studio để lấy Key</Text>
+            <Text style={styles.linkButtonText}>🌐 Nhận Key miễn phí tại Google AI Studio</Text>
           </TouchableOpacity>
 
-          <Text style={styles.inputLabel}>Nhập Google Gemini API Key:</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="AIzaSy..."
-            placeholderTextColor={COLORS.textMuted}
-            value={apiKey}
-            onChangeText={setApiKey}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry={false}
-          />
+          <Text style={styles.inputLabel}>
+            {hasEnv ? 'Ghi đè bằng Key khác (nếu muốn):' : 'Nhập Gemini API Key:'}
+          </Text>
+
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập key AIzaSy... (được ẩn an toàn)"
+              placeholderTextColor={COLORS.textMuted}
+              value={apiKey}
+              onChangeText={setApiKey}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry={!showKey}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowKey(!showKey)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.eyeText}>{showKey ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -134,7 +187,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   title: {
     fontSize: 17,
@@ -149,11 +202,54 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '600',
   },
-  guideText: {
+  statusBoxActive: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    padding: SPACING.sm + 4,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+  },
+  statusBoxCustom: {
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    padding: SPACING.sm + 4,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+  },
+  statusBoxMissing: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    padding: SPACING.sm + 4,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+  },
+  statusTitle: {
     fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  statusTitleMissing: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  statusDesc: {
+    fontSize: 12,
     color: COLORS.textMuted,
-    lineHeight: 18,
-    marginBottom: SPACING.sm,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  resetBtn: {
+    marginTop: 6,
+  },
+  resetBtnText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   linkButton: {
     marginBottom: SPACING.md,
@@ -170,16 +266,28 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 6,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
+    backgroundColor: COLORS.background,
+    marginBottom: SPACING.lg,
+  },
+  input: {
+    flex: 1,
     paddingHorizontal: SPACING.md,
     paddingVertical: 10,
     fontSize: 14,
     color: COLORS.text,
-    backgroundColor: COLORS.background,
-    marginBottom: SPACING.lg,
+  },
+  eyeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  eyeText: {
+    fontSize: 16,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -209,4 +317,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
